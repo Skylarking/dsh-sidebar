@@ -1,14 +1,19 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-/** Sidebar terminal trigger and bottom-docked persistent PTY. */
+import { jsx as _jsx } from "react/jsx-runtime";
+/** Persistent terminal view registered in both Sidebar docks. */
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
-import { IconCloseOutline16, IconCodeOutline16, IconPanelLeftOutline16, IconPlusOutline16, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
 import css from './WorkspaceConsole.module.css';
-/** Conversation utility that toggles the bottom split panel. */
-export function WorkspaceConsoleTrigger({ layout, t }) {
-    return _jsx(Tooltip, { label: t('action.open'), delayMs: 500, children: _jsx("button", { type: "button", className: css.trigger, "aria-label": t('action.open'), onClick: layout.toggleBottomPanel, children: _jsx("span", { className: css.bottomPanelIcon, children: _jsx(IconPanelLeftOutline16, {}) }) }) });
+/**
+ * Bind shared terminal services to a keyed Sidebar view registration.
+ * @param injected - Workspace and terminal services shared by all instances.
+ * @returns a component whose PTY lifecycle belongs to one dock tab.
+ */
+export function bindWorkspaceTerminalView(injected) {
+    return function BoundWorkspaceTerminalView(props) {
+        return _jsx(WorkspaceTerminalView, { ...injected, ...props });
+    };
 }
 function cssColor(element, name, fallback) {
     return getComputedStyle(element).getPropertyValue(name).trim() || fallback;
@@ -36,7 +41,7 @@ function xterm(element) {
     fit.fit();
     return { terminal, fit };
 }
-function TerminalViewport({ active, workspaceId, remote, t }) {
+function TerminalViewport({ active, remote, t, workspaceId }) {
     const elementRef = useRef(null);
     const viewRef = useRef();
     const translateRef = useRef(t);
@@ -56,19 +61,18 @@ function TerminalViewport({ active, workspaceId, remote, t }) {
             if (lifecycle.signal.aborted)
                 return;
             const message = error instanceof Error ? error.message : String(error);
-            view.terminal.write(`\r\n\x1b[31m${translateRef.current('error')}: ${message}\x1b[0m\r\n`);
+            view.terminal.write(`\r\n\x1b[31m${translateRef.current('terminal.error')}: ${message}\x1b[0m\r\n`);
         };
         const poll = async () => {
             if (lifecycle.signal.aborted || sessionId === undefined)
                 return;
             try {
                 const result = await remote.read(sessionId, offset);
-                // React cleanup may abort this lifecycle while the Remote read is in flight.
                 if (lifecycle.signal.aborted)
                     return;
                 offset = result.nextOffset;
                 if (result.lossy)
-                    view.terminal.write(`\r\n\x1b[33m${translateRef.current('truncated')}\x1b[0m\r\n`);
+                    view.terminal.write(`\r\n\x1b[33m${translateRef.current('terminal.truncated')}\x1b[0m\r\n`);
                 if (result.text !== '')
                     view.terminal.write(result.text);
                 if (!result.exited)
@@ -114,7 +118,7 @@ function TerminalViewport({ active, workspaceId, remote, t }) {
                 void writeQueue.then(() => remote.close(opened));
             }
         };
-    }, [remote, workspaceId]); // active visibility must not restart the PTY
+    }, [remote, workspaceId]);
     useEffect(() => {
         if (!active)
             return;
@@ -123,50 +127,25 @@ function TerminalViewport({ active, workspaceId, remote, t }) {
     }, [active]);
     return _jsx("div", { ref: elementRef, className: css.terminal, onMouseDown: () => { elementRef.current?.querySelector('.xterm-helper-textarea')?.focus(); } });
 }
-/** Bottom-docked interactive terminal panel. */
-export function WorkspaceConsolePanel({ workspaces, terminal, t, close }) {
-    const items = useSyncExternalStore(workspaces.subscribe, () => workspaces.getSnapshot().items);
-    const nextTabId = useRef(1);
-    const [tabs, setTabs] = useState([]);
-    const [activeTabId, setActiveTabId] = useState();
+/**
+ * Render one Sidebar terminal tab bound to one Workspace and PTY lifecycle.
+ * @param props - active state plus shared Workspace and terminal services.
+ * @returns the mounted terminal view.
+ */
+export function WorkspaceTerminalView({ active, setTitle, terminal, t, workspaces }) {
+    const snapshot = useSyncExternalStore(workspaces.subscribe, workspaces.getSnapshot);
+    const items = snapshot.items;
+    const [workspaceId, setWorkspaceId] = useState();
     useEffect(() => {
-        setTabs((current) => {
-            const fallback = items[0]?.workspaceId;
-            if (fallback === undefined)
-                return [];
-            if (current.length === 0)
-                return [{ id: nextTabId.current++, workspaceId: fallback }];
-            return current.map(tab => items.some(item => item.workspaceId === tab.workspaceId)
-                ? tab
-                : { ...tab, workspaceId: fallback });
-        });
-    }, [items]);
-    const selectedTabId = tabs.some(tab => tab.id === activeTabId) ? activeTabId : tabs[0]?.id;
-    const addTab = () => {
-        const source = tabs.find(tab => tab.id === selectedTabId) ?? tabs[0];
-        if (source === undefined)
+        if (workspaceId !== undefined && items.some(item => item.workspaceId === workspaceId))
             return;
-        const tab = { id: nextTabId.current++, workspaceId: source.workspaceId };
-        setTabs(current => [...current, tab]);
-        setActiveTabId(tab.id);
-    };
-    const closeTab = (id) => {
-        if (tabs.length === 1) {
-            close();
-            return;
-        }
-        const index = tabs.findIndex(tab => tab.id === id);
-        const remaining = tabs.filter(tab => tab.id !== id);
-        setTabs(remaining);
-        if (selectedTabId === id)
-            setActiveTabId(remaining[index]?.id ?? remaining[index - 1]?.id);
-    };
-    const setWorkspace = (id, workspaceId) => {
-        setActiveTabId(id);
-        setTabs(current => current.map(tab => tab.id === id ? { ...tab, workspaceId } : tab));
-    };
-    return (_jsxs("section", { className: css.panel, "aria-label": t('title'), children: [_jsxs("header", { className: css.tabBar, children: [_jsxs("div", { className: css.tabs, children: [tabs.map(tab => (_jsxs("label", { className: css.tab, "data-active": tab.id === selectedTabId, onMouseDown: () => { setActiveTabId(tab.id); }, children: [_jsx(IconCodeOutline16, { size: 14 }), _jsx("span", { className: css.srOnly, children: t('workspace') }), _jsx("select", { value: tab.workspaceId, "aria-label": t('workspace'), onChange: (event) => { setWorkspace(tab.id, event.target.value); }, children: items.map(item => _jsx("option", { value: item.workspaceId, children: item.title }, item.workspaceId)) }), _jsx("button", { type: "button", className: css.tabClose, "aria-label": t('action.closeTab'), onClick: (event) => { event.preventDefault(); closeTab(tab.id); }, children: _jsx(IconCloseOutline16, { size: 13 }) })] }, tab.id))), _jsx(Tooltip, { label: t('action.new'), delayMs: 500, children: _jsx("button", { type: "button", className: css.add, "aria-label": t('action.new'), disabled: tabs.length === 0, onClick: addTab, children: _jsx(IconPlusOutline16, {}) }) })] }), _jsx("button", { type: "button", className: css.close, "aria-label": t('action.close'), onClick: close, children: _jsx(IconCloseOutline16, {}) })] }), tabs.length === 0
-                ? _jsx("div", { className: css.empty, children: t('noWorkspace') })
-                : _jsx("div", { className: css.terminals, children: tabs.map(tab => (_jsx("div", { className: css.terminalPane, hidden: tab.id !== selectedTabId, children: _jsx(TerminalViewport, { active: tab.id === selectedTabId, workspaceId: tab.workspaceId, remote: terminal, t: t }) }, tab.id))) })] }));
+        const recent = snapshot.recentWorkspaceId;
+        setWorkspaceId(recent !== undefined && items.some(item => item.workspaceId === recent) ? recent : items[0]?.workspaceId);
+    }, [items, snapshot.recentWorkspaceId, workspaceId]);
+    const selectedWorkspace = items.find(item => item.workspaceId === workspaceId);
+    useEffect(() => { setTitle(selectedWorkspace?.title); }, [selectedWorkspace?.title, setTitle]);
+    return (_jsx("section", { className: css.view, "aria-label": t('view.terminal'), children: workspaceId === undefined
+            ? _jsx("div", { className: css.empty, children: t('empty.workspaces') })
+            : _jsx(TerminalViewport, { active: active, workspaceId: workspaceId, remote: terminal, t: t }) }));
 }
 //# sourceMappingURL=WorkspaceConsole.js.map

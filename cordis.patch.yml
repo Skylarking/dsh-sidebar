@@ -2,5 +2,8 @@
     - id: workspace-console
       name: '@skylarking/dsh-host-workspace-console'
 
+    - id: workspace-files
+      name: '@skylarking/dsh-host-workspace-files'
+
     - id: ui-workspace-console
       name: '@skylarking/dsh-client-ui-workspace-console'

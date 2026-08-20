@@ -1,18 +1,20 @@
-# `@skylarking/dsh-workspace-console`
+# `@skylarking/dsh-sidebar`
 
 English | [中文](README.zh.md)
 
-Repository-tracked external plugin bundle for the Workspace terminal. It is not part of the DSH or Desktop release dependency closure. Its patch mounts the persistent [`dsh-host-workspace-console`](packages/host/README.md) PTY Remote and the [`dsh-client-ui-workspace-console`](packages/client/README.md) bottom-panel UI together. While the bundle is enabled, Desktop installs those loader packages and the shared Workspace layout as managed profile aliases. Disabling or uninstalling the bundle removes the aliases, Remote route, new-session and session-header triggers, open panel, PTY processes, and retained output as one plugin lifecycle.
+Installable Sidebar plugin for DeepSeek Harness Desktop. One plugin lifecycle mounts the resizable right and bottom docks, the persistent terminal and bounded file Remotes, and their browser views. The bottom dock initially opens a terminal and the right dock initially opens files; either dock can add terminal or file tabs from its plus menu, and switching tabs keeps inactive view state mounted.
 
-Install it from **Settings > Plugins > Plugin list > Install local plugin** by selecting `plugins/workspace-console`. Desktop activates the plugin's external Workspace layout support while this or another dependent plugin is enabled. Disabling or uninstalling the last dependent removes that profile-local package alias and restores the bundled DSH layout.
+Install it from **Settings > Plugins > Plugin list > Install local plugin** by selecting `plugins/dsh-sidebar`. The package and installed plugin identity are `@skylarking/dsh-sidebar`.
+
+The Client package owns the [view registration API](packages/client/README.md#view-extension). Terminal, files, and future external views use the same catalog plus keyed renderers; the dock layout does not import view implementations.
 
 ## Security and limits
 
-The Host executor accepts only registered Workspace ids and starts the terminal with the selected Workspace as its initial working directory. The PTY retains the Host user's filesystem and process authority; Workspace selection is not a sandbox.
+Both built-in views accept only registered Workspace ids. File operations enforce Workspace containment and bounded previews. The terminal starts in the selected Workspace but retains the Host user's filesystem and process authority; Workspace selection is not a sandbox.
 
 ## Model Experience
 
-None, as commands originate from direct user input in the console and do not enter an agent turn.
+None, as Sidebar interactions do not alter prompts, tools, messages, or provider requests.
 
 #### KV Cache effect
 
@@ -20,5 +22,5 @@ None.
 
 ## Known Limitations and Deferred Work
 
-- **Bounded retained output** — the Host keeps only the configured terminal-output byte tail for polling clients.
-- **Unary Remote transport** — terminal output reaches xterm through polling rather than a streaming subscription.
+- Terminal output uses bounded polling rather than a streaming Remote subscription.
+- Dock tabs and geometry are transient; closing a dock disposes its mounted view instances.

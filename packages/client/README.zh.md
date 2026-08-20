@@ -1,14 +1,20 @@
-# @skylarking/dsh-client-ui-workspace-console
+# `@skylarking/dsh-client-ui-workspace-console`
 
 [English](README.md) | 中文
 
-可逆的操作者终端界面。浏览器半边同时向 `shell.hero.utilities` 和 `conversation.session.header.utilities` 贡献“命令行控制台”图标，并占用布局拥有的 `shell.bottomPanel` 分栏。每个标签都挂载带 fit addon 的 xterm，按照到达顺序把原始键盘数据串行转发到自己持久的 `workspaceConsole` PTY，通过基于 offset 的轮询读取输出，并在分栏尺寸变化后发送行列数。新增标签会继承当前标签的工作空间，切换标签会保留两个 shell 会话。操作者可在每个所选工作空间的初始目录内使用 shell 状态、REPL、终端控制键和交互式程序。
+可安装 Sidebar 插件的浏览器 package。它使用通用标签宿主占据 layout 持有的 `shell.rightPanel` 与 `shell.bottomPanel` slot。右侧 Dock 默认打开文件，底部 Dock 默认打开终端；两处使用相同的新增菜单，并保留未激活标签的组件身份。新建的内置视图绑定最近使用的 Workspace，不再渲染第二个 Workspace 选择器；终端标签会用绑定的 Workspace 标题替换 catalog 标题。
 
-已挂载面板拥有每个标签的 PTY id。关闭标签只终止对应会话；改变该标签的工作空间会替换其会话；关闭面板或卸载插件会终止全部剩余会话。可见性、标签和几何信息属于瞬时布局状态。删除其 cordis.yml 条目会关闭分栏并删除按钮与终端；删除独立 Host 条目会撤销终端权限，并等待 Host 侧进程清理完成。两种卸载路径都不改变工作空间或会话持久数据。
+该 package 在注册 UI 前挂载 `workspaceConsole` 与 `workspaceFiles` Remote contribution。卸载会移除两个 Dock、入口和已注册视图，关闭布局区域，终止已挂载 PTY，并释放文件浏览状态。
+
+## 视图扩展
+
+一种视图需要向 `workspace-sidebar.view` 提交一个 catalog entry，并向 `workspace-sidebar.right.view` 与 `workspace-sidebar.bottom.view` 提交匹配的 keyed renderer。catalog entry 的 `id` 是分发 key，`label` 是新增菜单文本与默认标签标题。每个 renderer 都会收到 `active` 和 `setTitle`；标签保持挂载但隐藏时，`active` 为 false，`setTitle` 用于替换该标签实例的标题。
+
+先注册两个 keyed renderer，再发布 catalog entry；释放时先移除 catalog，再移除 renderer。Dock 会拒绝缺少任意一个 renderer 的 catalog id。该对称约束保证菜单中的每种视图都能在两个位置打开；后续 Review 插件只需注册这三个 slot，无需修改 Sidebar。
 
 ## 模型体验
 
-无，因为此操作者界面不改变提示词、工具、消息或提供方请求。
+无，因为该操作界面没有模型可见输出。
 
 #### KV Cache 影响
 
@@ -16,4 +22,5 @@
 
 ## 已知限制与暂缓事项
 
-- 输出通过有界轮询而不是流式 Remote 订阅抵达 xterm；面板断开或延迟期间，Host 只保留配置的字节尾部。
+- 视图实例在标签切换时保持，但关闭 Dock 或卸载插件会释放实例。
+- 终端专用内部 package 保留 `workspace-console`；可安装项目和 bundle 分别是 `dsh-sidebar` 与 `@skylarking/dsh-sidebar`。

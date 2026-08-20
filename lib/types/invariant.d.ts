@@ -1,7 +1,7 @@
-/** Package-owned invariant companion for the Workspace console bundle. @module @skylarking/dsh-workspace-console/invariant */
+/** Package-owned invariant companion for the Sidebar bundle. @module @skylarking/dsh-sidebar/invariant */
 import type { Context } from '@deepseek-ai/cordis';
 /** Cordis companion plugin name. */
-export declare const name = "workspace-console-bundle-invariant";
+export declare const name = "sidebar-bundle-invariant";
 /** Service required before the companion can register. */
 export declare const inject: string[];
 /**

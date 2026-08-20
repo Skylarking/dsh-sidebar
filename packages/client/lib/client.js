@@ -1923,6 +1923,24 @@ window.__ModuleLoader__.load({
 				return payload;
 			};
 		});
+		const $ZodLiteral = /*@__PURE__*/ $constructor("$ZodLiteral", (inst, def) => {
+			$ZodType.init(inst, def);
+			if (def.values.length === 0) throw new Error("Cannot create literal schema with no valid values");
+			const values = new Set(def.values);
+			inst._zod.values = values;
+			inst._zod.pattern = new RegExp(`^(${def.values.map((o) => typeof o === "string" ? escapeRegex(o) : o ? escapeRegex(o.toString()) : String(o)).join("|")})$`);
+			inst._zod.parse = (payload, _ctx) => {
+				const input = payload.value;
+				if (values.has(input)) return payload;
+				payload.issues.push({
+					code: "invalid_value",
+					values: def.values,
+					input,
+					inst
+				});
+				return payload;
+			};
+		});
 		const $ZodTransform = /*@__PURE__*/ $constructor("$ZodTransform", (inst, def) => {
 			$ZodType.init(inst, def);
 			inst._zod.optin = "optional";
@@ -3083,6 +3101,27 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			if (values.every((v) => typeof v === "string")) json.type = "string";
 			json.enum = values;
 		};
+		const literalProcessor = (schema, ctx, json, _params) => {
+			const def = schema._zod.def;
+			const vals = [];
+			for (const val of def.values) if (val === void 0) {
+				if (ctx.unrepresentable === "throw") throw new Error("Literal `undefined` cannot be represented in JSON Schema");
+			} else if (typeof val === "bigint") if (ctx.unrepresentable === "throw") throw new Error("BigInt literals cannot be represented in JSON Schema");
+			else vals.push(Number(val));
+			else vals.push(val);
+			if (vals.length === 0) {} else if (vals.length === 1) {
+				const val = vals[0];
+				json.type = val === null ? "null" : typeof val;
+				if (ctx.target === "draft-04" || ctx.target === "openapi-3.0") json.enum = [val];
+				else json.const = val;
+			} else {
+				if (vals.every((v) => typeof v === "number")) json.type = "number";
+				if (vals.every((v) => typeof v === "string")) json.type = "string";
+				if (vals.every((v) => typeof v === "boolean")) json.type = "boolean";
+				if (vals.every((v) => v === null)) json.type = "null";
+				json.enum = vals;
+			}
+		};
 		const customProcessor = (_schema, ctx, _json, _params) => {
 			if (ctx.unrepresentable === "throw") throw new Error("Custom types cannot be represented in JSON Schema");
 		};
@@ -3900,6 +3939,23 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				...normalizeParams(params)
 			});
 		}
+		const ZodLiteral = /*@__PURE__*/ $constructor("ZodLiteral", (inst, def) => {
+			$ZodLiteral.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => literalProcessor(inst, ctx, json, params);
+			inst.values = new Set(def.values);
+			Object.defineProperty(inst, "value", { get() {
+				if (def.values.length > 1) throw new Error("This schema contains multiple valid literal values. Use `.values` instead.");
+				return def.values[0];
+			} });
+		});
+		function literal(value, params) {
+			return new ZodLiteral({
+				type: "literal",
+				values: Array.isArray(value) ? value : [value],
+				...normalizeParams(params)
+			});
+		}
 		const ZodTransform = /*@__PURE__*/ $constructor("ZodTransform", (inst, def) => {
 			$ZodTransform.init(inst, def);
 			ZodType.init(inst, def);
@@ -4066,7 +4122,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			return /* @__PURE__ */ _superRefine(fn, params);
 		}
 		//#endregion
-		//#region ../host/src/remote-contract.ts
+		//#region ../host/lib/remote-contract-U-rMvfM-.js
 		/** Plugin-owned Typert descriptors for the external workspace-console package. */
 		const sessionId = string();
 		const output = object({
@@ -4077,7 +4133,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			exitCode: union([number(), _null()]),
 			signal: union([string(), _null()])
 		});
-		function parameter(name, schema) {
+		function parameter$1(name, schema) {
 			return {
 				name,
 				wire: name,
@@ -4105,52 +4161,369 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			};
 		}
 		//#endregion
-		//#region ../host/src/remote.ts
+		//#region ../host/lib/typert.remote-client.js
+		/** Client Remote contribution owned by the external workspace-console plugin. */
 		/** Contribution mounted by the workspace-console Client plugin. */
-		const TYPERT_REMOTE = {
+		const TYPERT_REMOTE$1 = {
 			package: "@skylarking/dsh-host-workspace-console",
 			descriptors: [
 				invocation("open", [
-					parameter("workspaceId", string()),
-					parameter("cols", number()),
-					parameter("rows", number())
+					parameter$1("workspaceId", string()),
+					parameter$1("cols", number()),
+					parameter$1("rows", number())
 				], object({ sessionId }), "@skylarking/dsh-host-workspace-console/types#WorkspaceConsoleOpenResult"),
-				invocation("write", [parameter("sessionId", sessionId), parameter("data", string())], _undefined(), "void"),
-				invocation("read", [parameter("sessionId", sessionId), parameter("fromByte", number())], output, "@skylarking/dsh-host-workspace-console/types#WorkspaceConsoleReadResult"),
+				invocation("write", [parameter$1("sessionId", sessionId), parameter$1("data", string())], _undefined(), "void"),
+				invocation("read", [parameter$1("sessionId", sessionId), parameter$1("fromByte", number())], output, "@skylarking/dsh-host-workspace-console/types#WorkspaceConsoleReadResult"),
 				invocation("resize", [
-					parameter("sessionId", sessionId),
-					parameter("cols", number()),
-					parameter("rows", number())
+					parameter$1("sessionId", sessionId),
+					parameter$1("cols", number()),
+					parameter$1("rows", number())
 				], _undefined(), "void"),
-				invocation("close", [parameter("sessionId", sessionId)], _undefined(), "void")
+				invocation("close", [parameter$1("sessionId", sessionId)], _undefined(), "void")
 			]
 		};
 		//#endregion
-		//#region src/client/locales.ts
-		/** Workspace console dictionaries. */
-		const zh = {
-			"action.open": "命令行控制台",
-			"action.close": "关闭命令行控制台",
-			"action.new": "新建终端",
-			"action.closeTab": "关闭终端",
-			"title": "命令行控制台",
-			"workspace": "工作空间",
-			"error": "终端连接失败",
-			"truncated": "较早的终端输出已截断",
-			"noWorkspace": "还没有可执行命令的工作空间"
+		//#region ../files-host/src/remote-contract.ts
+		/** Plugin-owned Typert descriptors for the external workspace-files package. */
+		const workspaceId = string();
+		const path = string();
+		const entry = object({
+			name: string(),
+			path: string(),
+			kind: union([literal("file"), literal("directory")]),
+			ignored: boolean()
+		});
+		const listing = object({
+			path: string(),
+			entries: array(entry),
+			truncated: boolean()
+		});
+		const preview = union([
+			object({
+				kind: literal("text"),
+				path: string(),
+				content: string()
+			}),
+			object({
+				kind: literal("image"),
+				path: string(),
+				mimeType: string(),
+				base64: string()
+			}),
+			object({
+				kind: literal("unsupported"),
+				path: string(),
+				reason: union([
+					literal("binary"),
+					literal("too-large"),
+					literal("unreadable")
+				])
+			})
+		]);
+		function parameter(name, schema) {
+			return {
+				name,
+				wire: name,
+				source: "json",
+				codec: {
+					mode: "strict",
+					typeSymbol: `@skylarking/dsh-host-workspace-files#${name}`,
+					schema
+				}
+			};
+		}
+		//#endregion
+		//#region ../files-host/src/remote.ts
+		/** Contribution mounted by the workspace-files Client plugin. */
+		const TYPERT_REMOTE = {
+			package: "@skylarking/dsh-host-workspace-files",
+			descriptors: [{
+				id: "@skylarking/dsh-host-workspace-files#workspaceFiles/list",
+				service: "workspaceFiles",
+				namespace: "workspaceFiles",
+				method: "list",
+				invocation: { kind: "direct" },
+				parameters: [parameter("workspaceId", workspaceId), parameter("path", path)],
+				result: {
+					mode: "strict",
+					typeSymbol: "@skylarking/dsh-host-workspace-files/types#WorkspaceDirectoryListing",
+					schema: listing
+				}
+			}, {
+				id: "@skylarking/dsh-host-workspace-files#workspaceFiles/read",
+				service: "workspaceFiles",
+				namespace: "workspaceFiles",
+				method: "read",
+				invocation: { kind: "direct" },
+				parameters: [parameter("workspaceId", workspaceId), parameter("path", path)],
+				result: {
+					mode: "strict",
+					typeSymbol: "@skylarking/dsh-host-workspace-files/types#WorkspaceFilePreview",
+					schema: preview
+				}
+			}]
 		};
-		/** English dictionary, checked against Chinese keys. */
-		const en = {
-			"action.open": "Command console",
-			"action.close": "Close command console",
-			"action.new": "New terminal",
-			"action.closeTab": "Close terminal",
-			"title": "Command console",
-			"workspace": "Workspace",
-			"error": "Terminal connection failed",
-			"truncated": "Earlier terminal output was truncated",
-			"noWorkspace": "No workspace is available for commands"
+		//#endregion
+		//#region \0dsh-css:/Users/skylarking/code/tools/deepseek-harness-desktop/plugins/dsh-sidebar/packages/client/src/client/SidebarDock.module.css.mjs
+		const css$3 = ".B2oxVG_dock{width:100%;min-width:0;height:100%;min-height:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base);flex-direction:column;display:flex;overflow:hidden}.B2oxVG_triggers{align-items:center;gap:2px;display:flex}.B2oxVG_trigger{width:32px;height:32px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:0;border-radius:6px;place-items:center;padding:0;display:grid}.B2oxVG_trigger:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.B2oxVG_bottomIcon{place-items:center;display:grid;transform:rotate(-90deg)}.B2oxVG_rightIcon{place-items:center;display:grid;transform:scaleX(-1)}.B2oxVG_tabBar{z-index:3;flex:none;justify-content:space-between;align-items:center;min-height:38px;padding:4px 8px;display:flex;position:relative}.B2oxVG_tabCluster{flex:1;align-items:center;gap:2px;min-width:0;display:flex}.B2oxVG_tabs{scrollbar-width:none;flex:0 auto;align-items:center;gap:3px;min-width:0;display:flex;overflow-x:auto}.B2oxVG_tabs::-webkit-scrollbar{display:none}.B2oxVG_actions{flex:none;align-items:center;gap:2px;display:flex}.B2oxVG_tab{min-width:96px;max-width:180px;height:30px;color:var(--dsw-alias-label-secondary);border-radius:6px;flex:none;align-items:center;padding-right:3px;display:flex}.B2oxVG_tab[data-active]{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.B2oxVG_tabSelect{min-width:0;height:30px;color:inherit;cursor:pointer;background:0 0;border:0;flex:1;align-items:center;gap:6px;padding:0 4px 0 8px;display:flex}.B2oxVG_tabSelect span{min-width:0;font:500 12px/18px var(--dsw-font-family);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.B2oxVG_iconButton,.B2oxVG_close{width:26px;height:26px;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:0;border-radius:5px;flex:none;place-items:center;padding:0;display:grid}.B2oxVG_iconButton:hover,.B2oxVG_close:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.B2oxVG_iconButton:disabled{opacity:.4;cursor:default}.B2oxVG_addWrap{flex:none;position:relative}.B2oxVG_menu{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-elevated,var(--dsw-alias-bg-base));border-radius:7px;flex-direction:column;min-width:140px;padding:4px;display:flex;position:absolute;top:31px;right:0;box-shadow:0 8px 24px #00000024}.B2oxVG_menu button{width:100%;height:30px;color:var(--dsw-alias-label-primary);font:12px/18px var(--dsw-font-family);cursor:pointer;background:0 0;border:0;border-radius:5px;align-items:center;gap:8px;padding:0 9px;display:flex}.B2oxVG_menu button:hover{background:var(--dsw-alias-interactive-bg-hover)}.B2oxVG_panes,.B2oxVG_pane{flex:1;min-width:0;min-height:0}.B2oxVG_pane{display:flex}.B2oxVG_pane[hidden]{display:none}.B2oxVG_empty{color:var(--dsw-alias-label-tertiary);font:12px/18px var(--dsw-font-family);flex:1;place-items:center;display:grid}";
+		const tagId$3 = "@skylarking/dsh-client-ui-workspace-console/SidebarDock.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$3) + "]") === null) {
+			const tag = document.createElement("style");
+			tag.dataset.plugin = "@skylarking/dsh-client-ui-workspace-console";
+			tag.dataset.pluginCss = tagId$3;
+			tag.textContent = css$3;
+			document.head.appendChild(tag);
+		}
+		var SidebarDock_module_css_default = {
+			"empty": "B2oxVG_empty",
+			"tabCluster": "B2oxVG_tabCluster",
+			"tabs": "B2oxVG_tabs",
+			"tab": "B2oxVG_tab",
+			"trigger": "B2oxVG_trigger",
+			"tabBar": "B2oxVG_tabBar",
+			"dock": "B2oxVG_dock",
+			"bottomIcon": "B2oxVG_bottomIcon",
+			"actions": "B2oxVG_actions",
+			"addWrap": "B2oxVG_addWrap",
+			"tabSelect": "B2oxVG_tabSelect",
+			"close": "B2oxVG_close",
+			"panes": "B2oxVG_panes",
+			"triggers": "B2oxVG_triggers",
+			"iconButton": "B2oxVG_iconButton",
+			"rightIcon": "B2oxVG_rightIcon",
+			"menu": "B2oxVG_menu",
+			"pane": "B2oxVG_pane"
 		};
+		//#endregion
+		//#region src/client/SidebarDock.tsx
+		/** Generic tab host for one Sidebar dock location. */
+		/** Open the two Sidebar dock locations without selecting a view type. */
+		function SidebarTriggers({ layout, t }) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: SidebarDock_module_css_default.triggers,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+					label: t("action.openBottom"),
+					delayMs: 500,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: SidebarDock_module_css_default.trigger,
+						"aria-label": t("action.openBottom"),
+						onClick: layout.toggleBottomPanel,
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: SidebarDock_module_css_default.bottomIcon,
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPanelLeftOutline16, {})
+						})
+					})
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+					label: t("action.openRight"),
+					delayMs: 500,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: SidebarDock_module_css_default.trigger,
+						"aria-label": t("action.openRight"),
+						onClick: layout.toggleRightPanel,
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: SidebarDock_module_css_default.rightIcon,
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPanelLeftOutline16, {})
+						})
+					})
+				})]
+			});
+		}
+		/** Right dock wrapper authorized to dispatch right-view registrations. */
+		function RightDock(props) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SidebarDock, {
+				...props,
+				catalog: props.renderSlot("workspace-sidebar.view", {}),
+				defaultView: "files",
+				renderView: (viewId, owner) => props.renderSlot("workspace-sidebar.right.view", owner, { entryKey: viewId })
+			});
+		}
+		/** Bottom dock wrapper authorized to dispatch bottom-view registrations. */
+		function BottomDock(props) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SidebarDock, {
+				...props,
+				defaultView: "terminal",
+				renderView: (viewId, owner) => props.renderSlot("workspace-sidebar.bottom.view", owner, { entryKey: viewId })
+			});
+		}
+		function viewIcon(viewId) {
+			if (viewId === "terminal") return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutline16, { size: 14 });
+			if (viewId === "files") return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, { size: 14 });
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPanelLeftOutline16, { size: 14 });
+		}
+		function viewLabel(viewId, t) {
+			if (viewId === "terminal") return t("view.terminal");
+			if (viewId === "files") return t("view.files");
+			return viewId;
+		}
+		function registeredLabel(label, viewId, t) {
+			const builtIn = viewLabel(viewId, t);
+			return builtIn === viewId ? (typeof label === "function" ? label() : label) ?? viewId : builtIn;
+		}
+		/** Render mixed registered views while preserving every inactive tab's React identity. */
+		function SidebarDock({ catalog, close, defaultView, renderView, t, views }) {
+			const entries = (0, react.useSyncExternalStore)(views.subscribe, views.getSnapshot);
+			const definitions = (0, react.useMemo)(() => entries.flatMap((entry) => {
+				const id = entry.options.id;
+				return id === void 0 ? [] : [{
+					id,
+					label: registeredLabel(entry.options.label, id, t)
+				}];
+			}), [entries, t]);
+			const nextId = (0, react.useRef)(1);
+			const titleSetters = (0, react.useRef)(/* @__PURE__ */ new Map());
+			const [tabs, setTabs] = (0, react.useState)([]);
+			const [activeId, setActiveId] = (0, react.useState)();
+			const [menuOpen, setMenuOpen] = (0, react.useState)(false);
+			(0, react.useEffect)(() => {
+				if (tabs.length !== 0 || definitions.length === 0) return;
+				const viewId = definitions.some((view) => view.id === defaultView) ? defaultView : definitions[0].id;
+				const tab = {
+					id: nextId.current++,
+					viewId,
+					title: void 0
+				};
+				setTabs([tab]);
+				setActiveId(tab.id);
+			}, [
+				defaultView,
+				definitions,
+				tabs.length
+			]);
+			(0, react.useEffect)(() => {
+				const available = new Set(definitions.map((view) => view.id));
+				setTabs((current) => current.filter((tab) => available.has(tab.viewId)));
+			}, [definitions]);
+			const selectedId = tabs.some((tab) => tab.id === activeId) ? activeId : tabs[0]?.id;
+			const titleSetter = (id) => {
+				const existing = titleSetters.current.get(id);
+				if (existing !== void 0) return existing;
+				const setter = (title) => {
+					setTabs((current) => {
+						const target = current.find((tab) => tab.id === id);
+						if (target === void 0 || target.title === title) return current;
+						return current.map((tab) => tab.id === id ? {
+							...tab,
+							title
+						} : tab);
+					});
+				};
+				titleSetters.current.set(id, setter);
+				return setter;
+			};
+			const add = (viewId) => {
+				const tab = {
+					id: nextId.current++,
+					viewId,
+					title: void 0
+				};
+				setTabs((current) => [...current, tab]);
+				setActiveId(tab.id);
+				setMenuOpen(false);
+			};
+			const remove = (id) => {
+				const index = tabs.findIndex((tab) => tab.id === id);
+				const remaining = tabs.filter((tab) => tab.id !== id);
+				if (remaining.length === 0) {
+					titleSetters.current.delete(id);
+					close();
+					return;
+				}
+				titleSetters.current.delete(id);
+				setTabs(remaining);
+				if (selectedId === id) setActiveId(remaining[index]?.id ?? remaining[index - 1]?.id);
+			};
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+				className: SidebarDock_module_css_default.dock,
+				"aria-label": t("sidebar.title"),
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("header", {
+						className: SidebarDock_module_css_default.tabBar,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: SidebarDock_module_css_default.tabCluster,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: SidebarDock_module_css_default.tabs,
+								children: tabs.map((tab) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: SidebarDock_module_css_default.tab,
+									"data-active": tab.id === selectedId || void 0,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+										type: "button",
+										className: SidebarDock_module_css_default.tabSelect,
+										onClick: () => {
+											setActiveId(tab.id);
+										},
+										children: [viewIcon(tab.viewId), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: tab.title ?? definitions.find((view) => view.id === tab.viewId)?.label ?? viewLabel(tab.viewId, t) })]
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										type: "button",
+										className: SidebarDock_module_css_default.iconButton,
+										"aria-label": t("action.closeTab"),
+										onClick: () => {
+											remove(tab.id);
+										},
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutline16, { size: 13 })
+									})]
+								}, tab.id))
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: SidebarDock_module_css_default.addWrap,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+									label: t("action.add"),
+									delayMs: 500,
+									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										type: "button",
+										className: SidebarDock_module_css_default.iconButton,
+										"aria-label": t("action.add"),
+										disabled: definitions.length === 0,
+										onClick: () => {
+											setMenuOpen((value) => !value);
+										},
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, {})
+									})
+								}), menuOpen && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									className: SidebarDock_module_css_default.menu,
+									role: "menu",
+									children: definitions.map((view) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+										type: "button",
+										role: "menuitem",
+										onClick: () => {
+											add(view.id);
+										},
+										children: [viewIcon(view.id), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: view.label })]
+									}, view.id))
+								})]
+							})]
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: SidebarDock_module_css_default.actions,
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: SidebarDock_module_css_default.close,
+								"aria-label": t("action.close"),
+								onClick: close,
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutline16, {})
+							})
+						})]
+					}),
+					tabs.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: SidebarDock_module_css_default.empty,
+						children: t("empty.views")
+					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: SidebarDock_module_css_default.panes,
+						children: tabs.map((tab) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: SidebarDock_module_css_default.pane,
+							hidden: tab.id !== selectedId,
+							children: renderView(tab.viewId, {
+								active: tab.id === selectedId,
+								setTitle: titleSetter(tab.id)
+							})
+						}, tab.id))
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						hidden: true,
+						children: catalog
+					})
+				]
+			});
+		}
 		//#endregion
 		//#region ../../../../node_modules/.pnpm/@xterm+addon-fit@0.11.0/node_modules/@xterm/addon-fit/lib/addon-fit.js
 		var require_addon_fit = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -17184,8 +17557,19 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		//#region \0workspace-console-xterm-css.mjs
 		var import_addon_fit = require_addon_fit();
 		var import_xterm = require_xterm();
-		const css$1 = "/**\n * Copyright (c) 2014 The xterm.js authors. All rights reserved.\n * Copyright (c) 2012-2013, Christopher Jeffrey (MIT License)\n * https://github.com/chjj/term.js\n * @license MIT\n *\n * Permission is hereby granted, free of charge, to any person obtaining a copy\n * of this software and associated documentation files (the \"Software\"), to deal\n * in the Software without restriction, including without limitation the rights\n * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n * copies of the Software, and to permit persons to whom the Software is\n * furnished to do so, subject to the following conditions:\n *\n * The above copyright notice and this permission notice shall be included in\n * all copies or substantial portions of the Software.\n *\n * THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n * THE SOFTWARE.\n *\n * Originally forked from (with the author's permission):\n *   Fabrice Bellard's javascript vt100 for jslinux:\n *   http://bellard.org/jslinux/\n *   Copyright (c) 2011 Fabrice Bellard\n *   The original design remains. The terminal itself\n *   has been extended to include xterm CSI codes, among\n *   other features.\n */\n\n/**\n *  Default styles for xterm.js\n */\n\n.xterm {\n    cursor: text;\n    position: relative;\n    user-select: none;\n    -ms-user-select: none;\n    -webkit-user-select: none;\n}\n\n.xterm.focus,\n.xterm:focus {\n    outline: none;\n}\n\n.xterm .xterm-helpers {\n    position: absolute;\n    top: 0;\n    /**\n     * The z-index of the helpers must be higher than the canvases in order for\n     * IMEs to appear on top.\n     */\n    z-index: 5;\n}\n\n.xterm .xterm-helper-textarea {\n    padding: 0;\n    border: 0;\n    margin: 0;\n    /* Move textarea out of the screen to the far left, so that the cursor is not visible */\n    position: absolute;\n    opacity: 0;\n    left: -9999em;\n    top: 0;\n    width: 0;\n    height: 0;\n    z-index: -5;\n    /** Prevent wrapping so the IME appears against the textarea at the correct position */\n    white-space: nowrap;\n    overflow: hidden;\n    resize: none;\n}\n\n.xterm .composition-view {\n    /* TODO: Composition position got messed up somewhere */\n    background: #000;\n    color: #FFF;\n    display: none;\n    position: absolute;\n    white-space: nowrap;\n    z-index: 1;\n}\n\n.xterm .composition-view.active {\n    display: block;\n}\n\n.xterm .xterm-viewport {\n    /* On OS X this is required in order for the scroll bar to appear fully opaque */\n    background-color: #000;\n    overflow-y: scroll;\n    cursor: default;\n    position: absolute;\n    right: 0;\n    left: 0;\n    top: 0;\n    bottom: 0;\n}\n\n.xterm .xterm-screen {\n    position: relative;\n}\n\n.xterm .xterm-screen canvas {\n    position: absolute;\n    left: 0;\n    top: 0;\n}\n\n.xterm-char-measure-element {\n    display: inline-block;\n    visibility: hidden;\n    position: absolute;\n    top: 0;\n    left: -9999em;\n    line-height: normal;\n}\n\n.xterm.enable-mouse-events {\n    /* When mouse events are enabled (eg. tmux), revert to the standard pointer cursor */\n    cursor: default;\n}\n\n.xterm.xterm-cursor-pointer,\n.xterm .xterm-cursor-pointer {\n    cursor: pointer;\n}\n\n.xterm.column-select.focus {\n    /* Column selection mode */\n    cursor: crosshair;\n}\n\n.xterm .xterm-accessibility:not(.debug),\n.xterm .xterm-message {\n    position: absolute;\n    left: 0;\n    top: 0;\n    bottom: 0;\n    right: 0;\n    z-index: 10;\n    color: transparent;\n    pointer-events: none;\n}\n\n.xterm .xterm-accessibility-tree:not(.debug) *::selection {\n  color: transparent;\n}\n\n.xterm .xterm-accessibility-tree {\n  font-family: monospace;\n  user-select: text;\n  white-space: pre;\n}\n\n.xterm .xterm-accessibility-tree > div {\n  transform-origin: left;\n  width: fit-content;\n}\n\n.xterm .live-region {\n    position: absolute;\n    left: -9999px;\n    width: 1px;\n    height: 1px;\n    overflow: hidden;\n}\n\n.xterm-dim {\n    /* Dim should not apply to background, so the opacity of the foreground color is applied\n     * explicitly in the generated class and reset to 1 here */\n    opacity: 1 !important;\n}\n\n.xterm-underline-1 { text-decoration: underline; }\n.xterm-underline-2 { text-decoration: double underline; }\n.xterm-underline-3 { text-decoration: wavy underline; }\n.xterm-underline-4 { text-decoration: dotted underline; }\n.xterm-underline-5 { text-decoration: dashed underline; }\n\n.xterm-overline {\n    text-decoration: overline;\n}\n\n.xterm-overline.xterm-underline-1 { text-decoration: overline underline; }\n.xterm-overline.xterm-underline-2 { text-decoration: overline double underline; }\n.xterm-overline.xterm-underline-3 { text-decoration: overline wavy underline; }\n.xterm-overline.xterm-underline-4 { text-decoration: overline dotted underline; }\n.xterm-overline.xterm-underline-5 { text-decoration: overline dashed underline; }\n\n.xterm-strikethrough {\n    text-decoration: line-through;\n}\n\n.xterm-screen .xterm-decoration-container .xterm-decoration {\n	z-index: 6;\n	position: absolute;\n}\n\n.xterm-screen .xterm-decoration-container .xterm-decoration.xterm-decoration-top-layer {\n	z-index: 7;\n}\n\n.xterm-decoration-overview-ruler {\n    z-index: 8;\n    position: absolute;\n    top: 0;\n    right: 0;\n    pointer-events: none;\n}\n\n.xterm-decoration-top {\n    z-index: 2;\n    position: relative;\n}\n\n\n\n/* Derived from vs/base/browser/ui/scrollbar/media/scrollbar.css */\n\n/* xterm.js customization: Override xterm's cursor style */\n.xterm .xterm-scrollable-element > .scrollbar {\n    cursor: default;\n}\n\n/* Arrows */\n.xterm .xterm-scrollable-element > .scrollbar > .scra {\n	cursor: pointer;\n	font-size: 11px !important;\n}\n\n.xterm .xterm-scrollable-element > .visible {\n	opacity: 1;\n\n	/* Background rule added for IE9 - to allow clicks on dom node */\n	background:rgba(0,0,0,0);\n\n	transition: opacity 100ms linear;\n	/* In front of peek view */\n	z-index: 11;\n}\n.xterm .xterm-scrollable-element > .invisible {\n	opacity: 0;\n	pointer-events: none;\n}\n.xterm .xterm-scrollable-element > .invisible.fade {\n	transition: opacity 800ms linear;\n}\n\n/* Scrollable Content Inset Shadow */\n.xterm .xterm-scrollable-element > .shadow {\n	position: absolute;\n	display: none;\n}\n.xterm .xterm-scrollable-element > .shadow.top {\n	display: block;\n	top: 0;\n	left: 3px;\n	height: 3px;\n	width: 100%;\n	box-shadow: var(--vscode-scrollbar-shadow, #000) 0 6px 6px -6px inset;\n}\n.xterm .xterm-scrollable-element > .shadow.left {\n	display: block;\n	top: 3px;\n	left: 0;\n	height: 100%;\n	width: 3px;\n	box-shadow: var(--vscode-scrollbar-shadow, #000) 6px 0 6px -6px inset;\n}\n.xterm .xterm-scrollable-element > .shadow.top-left-corner {\n	display: block;\n	top: 0;\n	left: 0;\n	height: 3px;\n	width: 3px;\n}\n.xterm .xterm-scrollable-element > .shadow.top.left {\n	box-shadow: var(--vscode-scrollbar-shadow, #000) 6px 0 6px -6px inset;\n}\n";
-		const tagId$1 = "@skylarking/dsh-client-ui-workspace-console/xterm.css";
+		const css$2 = "/**\n * Copyright (c) 2014 The xterm.js authors. All rights reserved.\n * Copyright (c) 2012-2013, Christopher Jeffrey (MIT License)\n * https://github.com/chjj/term.js\n * @license MIT\n *\n * Permission is hereby granted, free of charge, to any person obtaining a copy\n * of this software and associated documentation files (the \"Software\"), to deal\n * in the Software without restriction, including without limitation the rights\n * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n * copies of the Software, and to permit persons to whom the Software is\n * furnished to do so, subject to the following conditions:\n *\n * The above copyright notice and this permission notice shall be included in\n * all copies or substantial portions of the Software.\n *\n * THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n * THE SOFTWARE.\n *\n * Originally forked from (with the author's permission):\n *   Fabrice Bellard's javascript vt100 for jslinux:\n *   http://bellard.org/jslinux/\n *   Copyright (c) 2011 Fabrice Bellard\n *   The original design remains. The terminal itself\n *   has been extended to include xterm CSI codes, among\n *   other features.\n */\n\n/**\n *  Default styles for xterm.js\n */\n\n.xterm {\n    cursor: text;\n    position: relative;\n    user-select: none;\n    -ms-user-select: none;\n    -webkit-user-select: none;\n}\n\n.xterm.focus,\n.xterm:focus {\n    outline: none;\n}\n\n.xterm .xterm-helpers {\n    position: absolute;\n    top: 0;\n    /**\n     * The z-index of the helpers must be higher than the canvases in order for\n     * IMEs to appear on top.\n     */\n    z-index: 5;\n}\n\n.xterm .xterm-helper-textarea {\n    padding: 0;\n    border: 0;\n    margin: 0;\n    /* Move textarea out of the screen to the far left, so that the cursor is not visible */\n    position: absolute;\n    opacity: 0;\n    left: -9999em;\n    top: 0;\n    width: 0;\n    height: 0;\n    z-index: -5;\n    /** Prevent wrapping so the IME appears against the textarea at the correct position */\n    white-space: nowrap;\n    overflow: hidden;\n    resize: none;\n}\n\n.xterm .composition-view {\n    /* TODO: Composition position got messed up somewhere */\n    background: #000;\n    color: #FFF;\n    display: none;\n    position: absolute;\n    white-space: nowrap;\n    z-index: 1;\n}\n\n.xterm .composition-view.active {\n    display: block;\n}\n\n.xterm .xterm-viewport {\n    /* On OS X this is required in order for the scroll bar to appear fully opaque */\n    background-color: #000;\n    overflow-y: scroll;\n    cursor: default;\n    position: absolute;\n    right: 0;\n    left: 0;\n    top: 0;\n    bottom: 0;\n}\n\n.xterm .xterm-screen {\n    position: relative;\n}\n\n.xterm .xterm-screen canvas {\n    position: absolute;\n    left: 0;\n    top: 0;\n}\n\n.xterm-char-measure-element {\n    display: inline-block;\n    visibility: hidden;\n    position: absolute;\n    top: 0;\n    left: -9999em;\n    line-height: normal;\n}\n\n.xterm.enable-mouse-events {\n    /* When mouse events are enabled (eg. tmux), revert to the standard pointer cursor */\n    cursor: default;\n}\n\n.xterm.xterm-cursor-pointer,\n.xterm .xterm-cursor-pointer {\n    cursor: pointer;\n}\n\n.xterm.column-select.focus {\n    /* Column selection mode */\n    cursor: crosshair;\n}\n\n.xterm .xterm-accessibility:not(.debug),\n.xterm .xterm-message {\n    position: absolute;\n    left: 0;\n    top: 0;\n    bottom: 0;\n    right: 0;\n    z-index: 10;\n    color: transparent;\n    pointer-events: none;\n}\n\n.xterm .xterm-accessibility-tree:not(.debug) *::selection {\n  color: transparent;\n}\n\n.xterm .xterm-accessibility-tree {\n  font-family: monospace;\n  user-select: text;\n  white-space: pre;\n}\n\n.xterm .xterm-accessibility-tree > div {\n  transform-origin: left;\n  width: fit-content;\n}\n\n.xterm .live-region {\n    position: absolute;\n    left: -9999px;\n    width: 1px;\n    height: 1px;\n    overflow: hidden;\n}\n\n.xterm-dim {\n    /* Dim should not apply to background, so the opacity of the foreground color is applied\n     * explicitly in the generated class and reset to 1 here */\n    opacity: 1 !important;\n}\n\n.xterm-underline-1 { text-decoration: underline; }\n.xterm-underline-2 { text-decoration: double underline; }\n.xterm-underline-3 { text-decoration: wavy underline; }\n.xterm-underline-4 { text-decoration: dotted underline; }\n.xterm-underline-5 { text-decoration: dashed underline; }\n\n.xterm-overline {\n    text-decoration: overline;\n}\n\n.xterm-overline.xterm-underline-1 { text-decoration: overline underline; }\n.xterm-overline.xterm-underline-2 { text-decoration: overline double underline; }\n.xterm-overline.xterm-underline-3 { text-decoration: overline wavy underline; }\n.xterm-overline.xterm-underline-4 { text-decoration: overline dotted underline; }\n.xterm-overline.xterm-underline-5 { text-decoration: overline dashed underline; }\n\n.xterm-strikethrough {\n    text-decoration: line-through;\n}\n\n.xterm-screen .xterm-decoration-container .xterm-decoration {\n	z-index: 6;\n	position: absolute;\n}\n\n.xterm-screen .xterm-decoration-container .xterm-decoration.xterm-decoration-top-layer {\n	z-index: 7;\n}\n\n.xterm-decoration-overview-ruler {\n    z-index: 8;\n    position: absolute;\n    top: 0;\n    right: 0;\n    pointer-events: none;\n}\n\n.xterm-decoration-top {\n    z-index: 2;\n    position: relative;\n}\n\n\n\n/* Derived from vs/base/browser/ui/scrollbar/media/scrollbar.css */\n\n/* xterm.js customization: Override xterm's cursor style */\n.xterm .xterm-scrollable-element > .scrollbar {\n    cursor: default;\n}\n\n/* Arrows */\n.xterm .xterm-scrollable-element > .scrollbar > .scra {\n	cursor: pointer;\n	font-size: 11px !important;\n}\n\n.xterm .xterm-scrollable-element > .visible {\n	opacity: 1;\n\n	/* Background rule added for IE9 - to allow clicks on dom node */\n	background:rgba(0,0,0,0);\n\n	transition: opacity 100ms linear;\n	/* In front of peek view */\n	z-index: 11;\n}\n.xterm .xterm-scrollable-element > .invisible {\n	opacity: 0;\n	pointer-events: none;\n}\n.xterm .xterm-scrollable-element > .invisible.fade {\n	transition: opacity 800ms linear;\n}\n\n/* Scrollable Content Inset Shadow */\n.xterm .xterm-scrollable-element > .shadow {\n	position: absolute;\n	display: none;\n}\n.xterm .xterm-scrollable-element > .shadow.top {\n	display: block;\n	top: 0;\n	left: 3px;\n	height: 3px;\n	width: 100%;\n	box-shadow: var(--vscode-scrollbar-shadow, #000) 0 6px 6px -6px inset;\n}\n.xterm .xterm-scrollable-element > .shadow.left {\n	display: block;\n	top: 3px;\n	left: 0;\n	height: 100%;\n	width: 3px;\n	box-shadow: var(--vscode-scrollbar-shadow, #000) 6px 0 6px -6px inset;\n}\n.xterm .xterm-scrollable-element > .shadow.top-left-corner {\n	display: block;\n	top: 0;\n	left: 0;\n	height: 3px;\n	width: 3px;\n}\n.xterm .xterm-scrollable-element > .shadow.top.left {\n	box-shadow: var(--vscode-scrollbar-shadow, #000) 6px 0 6px -6px inset;\n}\n";
+		const tagId$2 = "@skylarking/dsh-client-ui-workspace-console/xterm.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
+			const tag = document.createElement("style");
+			tag.dataset.plugin = "@skylarking/dsh-client-ui-workspace-console";
+			tag.dataset.pluginCss = tagId$2;
+			tag.textContent = css$2;
+			document.head.appendChild(tag);
+		}
+		//#endregion
+		//#region \0dsh-css:/Users/skylarking/code/tools/deepseek-harness-desktop/plugins/dsh-sidebar/packages/client/src/client/WorkspaceConsole.module.css.mjs
+		const css$1 = ".H4BsdW_view{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;overflow:hidden}.H4BsdW_terminal{background:var(--dsw-alias-bg-base);cursor:text;flex:1;min-width:0;min-height:0;padding:7px 10px 9px;overflow:hidden}.H4BsdW_terminal .xterm{width:100%;height:100%}.H4BsdW_terminal .xterm-viewport{scrollbar-color:var(--dsw-alias-border-l2) transparent;background:var(--dsw-alias-bg-base)!important}.H4BsdW_empty{color:var(--dsw-alias-label-tertiary);font:12px/18px var(--dsw-font-family);flex:1;place-items:center;display:grid}@media (width<=620px){.H4BsdW_terminal{padding:6px 8px 8px}}";
+		const tagId$1 = "@skylarking/dsh-client-ui-workspace-console/WorkspaceConsole.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@skylarking/dsh-client-ui-workspace-console";
@@ -17193,52 +17577,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			tag.textContent = css$1;
 			document.head.appendChild(tag);
 		}
-		//#endregion
-		//#region \0dsh-css:/Users/skylarking/code/tools/deepseek-harness-desktop/plugins/workspace-console/packages/client/src/client/WorkspaceConsole.module.css.mjs
-		const css = ".xOOxPq_trigger{width:32px;height:32px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:0;border-radius:6px;place-items:center;padding:0;display:grid}.xOOxPq_trigger:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.xOOxPq_bottomPanelIcon{place-items:center;display:grid;transform:rotate(-90deg)}.xOOxPq_panel{width:100%;min-width:0;height:100%;min-height:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base);flex-direction:column;display:flex;overflow:hidden}.xOOxPq_tabBar{background:var(--dsw-alias-bg-base);flex:none;justify-content:space-between;align-items:center;min-height:38px;padding:5px 10px 2px;display:flex}.xOOxPq_tabs{scrollbar-width:none;flex:1;align-items:center;gap:4px;min-width:0;display:flex;overflow-x:auto}.xOOxPq_tabs::-webkit-scrollbar{display:none}.xOOxPq_tab{width:190px;min-width:0;height:30px;color:var(--dsw-alias-label-secondary);cursor:default;background:0 0;border-radius:7px;flex:0 0 190px;align-items:center;gap:6px;padding:0 5px 0 9px;display:flex}.xOOxPq_tab[data-active=true]{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.xOOxPq_tab select{min-width:0;height:28px;color:inherit;font:500 12px/18px var(--dsw-font-family);text-overflow:ellipsis;color-scheme:inherit;cursor:default;background:0 0;border:0;outline:0;flex:1;padding:0;overflow:hidden}.xOOxPq_tabClose,.xOOxPq_add{width:24px;height:24px;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:0;border-radius:5px;flex:none;place-items:center;padding:0;display:grid}.xOOxPq_tabClose:hover,.xOOxPq_add:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.xOOxPq_add:disabled{opacity:.4;cursor:default}.xOOxPq_close{width:28px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:0;border-radius:6px;flex:none;place-items:center;padding:0;display:grid}.xOOxPq_close:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.xOOxPq_srOnly{clip:rect(0, 0, 0, 0);white-space:nowrap;border:0;width:1px;height:1px;margin:-1px;padding:0;position:absolute;overflow:hidden}.xOOxPq_terminals,.xOOxPq_terminalPane{flex:1;min-width:0;min-height:0}.xOOxPq_terminalPane{display:flex}.xOOxPq_terminalPane[hidden]{display:none}.xOOxPq_terminal{background:var(--dsw-alias-bg-base);cursor:text;flex:1;min-width:0;min-height:0;padding:7px 10px 9px;overflow:hidden}.xOOxPq_terminal .xterm{width:100%;height:100%}.xOOxPq_terminal .xterm-viewport{scrollbar-color:var(--dsw-alias-border-l2) transparent;background:var(--dsw-alias-bg-base)!important}.xOOxPq_empty{color:var(--dsw-alias-label-tertiary);font:13px/20px var(--dsw-font-family);flex:1;place-items:center;display:grid}@media (width<=620px){.xOOxPq_tab{flex-basis:160px;width:160px}.xOOxPq_terminal{padding:6px 8px 8px}}";
-		const tagId = "@skylarking/dsh-client-ui-workspace-console/WorkspaceConsole.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
-			const tag = document.createElement("style");
-			tag.dataset.plugin = "@skylarking/dsh-client-ui-workspace-console";
-			tag.dataset.pluginCss = tagId;
-			tag.textContent = css;
-			document.head.appendChild(tag);
-		}
 		var WorkspaceConsole_module_css_default = {
-			"add": "xOOxPq_add",
-			"tabClose": "xOOxPq_tabClose",
-			"terminals": "xOOxPq_terminals",
-			"terminal": "xOOxPq_terminal",
-			"tabs": "xOOxPq_tabs",
-			"close": "xOOxPq_close",
-			"tab": "xOOxPq_tab",
-			"bottomPanelIcon": "xOOxPq_bottomPanelIcon",
-			"panel": "xOOxPq_panel",
-			"trigger": "xOOxPq_trigger",
-			"srOnly": "xOOxPq_srOnly",
-			"terminalPane": "xOOxPq_terminalPane",
-			"empty": "xOOxPq_empty",
-			"tabBar": "xOOxPq_tabBar"
+			"view": "H4BsdW_view",
+			"terminal": "H4BsdW_terminal",
+			"empty": "H4BsdW_empty"
 		};
 		//#endregion
 		//#region src/client/WorkspaceConsole.tsx
-		/** Sidebar terminal trigger and bottom-docked persistent PTY. */
-		/** Conversation utility that toggles the bottom split panel. */
-		function WorkspaceConsoleTrigger({ layout, t }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: t("action.open"),
-				delayMs: 500,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-					type: "button",
-					className: WorkspaceConsole_module_css_default.trigger,
-					"aria-label": t("action.open"),
-					onClick: layout.toggleBottomPanel,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: WorkspaceConsole_module_css_default.bottomPanelIcon,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPanelLeftOutline16, {})
-					})
-				})
-			});
+		/** Persistent terminal view registered in both Sidebar docks. */
+		/**
+		* Bind shared terminal services to a keyed Sidebar view registration.
+		* @param injected - Workspace and terminal services shared by all instances.
+		* @returns a component whose PTY lifecycle belongs to one dock tab.
+		*/
+		function bindWorkspaceTerminalView(injected) {
+			return function BoundWorkspaceTerminalView(props) {
+				return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(WorkspaceTerminalView, {
+					...injected,
+					...props
+				});
+			};
 		}
 		function cssColor(element, name, fallback) {
 			return getComputedStyle(element).getPropertyValue(name).trim() || fallback;
@@ -17269,7 +17627,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				fit
 			};
 		}
-		function TerminalViewport({ active, workspaceId, remote, t }) {
+		function TerminalViewport({ active, remote, t, workspaceId }) {
 			const elementRef = (0, react.useRef)(null);
 			const viewRef = (0, react.useRef)();
 			const translateRef = (0, react.useRef)(t);
@@ -17287,7 +17645,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				const report = (error) => {
 					if (lifecycle.signal.aborted) return;
 					const message = error instanceof Error ? error.message : String(error);
-					view.terminal.write(`\r\n\x1b[31m${translateRef.current("error")}: ${message}\x1b[0m\r\n`);
+					view.terminal.write(`\r\n\x1b[31m${translateRef.current("terminal.error")}: ${message}\x1b[0m\r\n`);
 				};
 				const poll = async () => {
 					if (lifecycle.signal.aborted || sessionId === void 0) return;
@@ -17295,7 +17653,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 						const result = await remote.read(sessionId, offset);
 						if (lifecycle.signal.aborted) return;
 						offset = result.nextOffset;
-						if (result.lossy) view.terminal.write(`\r\n\x1b[33m${translateRef.current("truncated")}\x1b[0m\r\n`);
+						if (result.lossy) view.terminal.write(`\r\n\x1b[33m${translateRef.current("terminal.truncated")}\x1b[0m\r\n`);
 						if (result.text !== "") view.terminal.write(result.text);
 						if (!result.exited) pollTimer = setTimeout(() => {
 							poll();
@@ -17352,205 +17710,633 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				}
 			});
 		}
-		/** Bottom-docked interactive terminal panel. */
-		function WorkspaceConsolePanel({ workspaces, terminal, t, close }) {
-			const items = (0, react.useSyncExternalStore)(workspaces.subscribe, () => workspaces.getSnapshot().items);
-			const nextTabId = (0, react.useRef)(1);
-			const [tabs, setTabs] = (0, react.useState)([]);
-			const [activeTabId, setActiveTabId] = (0, react.useState)();
+		/**
+		* Render one Sidebar terminal tab bound to one Workspace and PTY lifecycle.
+		* @param props - active state plus shared Workspace and terminal services.
+		* @returns the mounted terminal view.
+		*/
+		function WorkspaceTerminalView({ active, setTitle, terminal, t, workspaces }) {
+			const snapshot = (0, react.useSyncExternalStore)(workspaces.subscribe, workspaces.getSnapshot);
+			const items = snapshot.items;
+			const [workspaceId, setWorkspaceId] = (0, react.useState)();
 			(0, react.useEffect)(() => {
-				setTabs((current) => {
-					const fallback = items[0]?.workspaceId;
-					if (fallback === void 0) return [];
-					if (current.length === 0) return [{
-						id: nextTabId.current++,
-						workspaceId: fallback
-					}];
-					return current.map((tab) => items.some((item) => item.workspaceId === tab.workspaceId) ? tab : {
-						...tab,
-						workspaceId: fallback
-					});
+				if (workspaceId !== void 0 && items.some((item) => item.workspaceId === workspaceId)) return;
+				const recent = snapshot.recentWorkspaceId;
+				setWorkspaceId(recent !== void 0 && items.some((item) => item.workspaceId === recent) ? recent : items[0]?.workspaceId);
+			}, [
+				items,
+				snapshot.recentWorkspaceId,
+				workspaceId
+			]);
+			const selectedWorkspace = items.find((item) => item.workspaceId === workspaceId);
+			(0, react.useEffect)(() => {
+				setTitle(selectedWorkspace?.title);
+			}, [selectedWorkspace?.title, setTitle]);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("section", {
+				className: WorkspaceConsole_module_css_default.view,
+				"aria-label": t("view.terminal"),
+				children: workspaceId === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: WorkspaceConsole_module_css_default.empty,
+					children: t("empty.workspaces")
+				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TerminalViewport, {
+					active,
+					workspaceId,
+					remote: terminal,
+					t
+				})
+			});
+		}
+		//#endregion
+		//#region \0dsh-css:/Users/skylarking/code/tools/deepseek-harness-desktop/plugins/dsh-sidebar/packages/client/src/client/WorkspaceFiles.module.css.mjs
+		const css = "._8T6eVG_panel{background:var(--dsw-alias-bg-base);flex-direction:column;width:100%;min-width:0;height:100%;min-height:0;display:flex;overflow:hidden;container:_8T6eVG_workspace-files/inline-size}._8T6eVG_header{flex:none;justify-content:space-between;align-items:center;gap:8px;min-height:42px;padding:5px 8px 5px 12px;display:flex}._8T6eVG_pathBar{min-width:0;color:var(--dsw-alias-label-secondary);flex:1;align-items:center;gap:7px;display:flex}._8T6eVG_pathBar svg{flex:none}._8T6eVG_pathBar input{width:100%;min-width:0;height:28px;color:var(--dsw-alias-label-primary);font:500 12px/20px var(--dsw-font-family);letter-spacing:0;text-overflow:ellipsis;background:0 0;border:0;border-radius:5px;outline:0;padding:0;overflow:hidden}._8T6eVG_pathBar input:focus{background:var(--dsw-alias-interactive-bg-hover);padding:0 7px}._8T6eVG_content{grid-template-columns:var(--workspace-tree-width,clamp(140px, 42%, 220px)) 1px minmax(0, 1fr);flex:1;min-height:0;display:grid;position:relative}._8T6eVG_tree{background:var(--dsw-alias-bg-base);min-width:0;min-height:0;padding:6px;overflow:auto}._8T6eVG_treeResizeHandle{z-index:2;cursor:col-resize;touch-action:none;user-select:none;background:0 0;border:0;outline:0;width:9px;height:100%;margin-left:-4px;padding:0;position:relative}._8T6eVG_treeResizeHandle:before{content:\"\";background:0 0;width:1px;position:absolute;top:0;bottom:0;left:4px}._8T6eVG_treeResizeHandle:hover:before,._8T6eVG_treeResizeHandle:focus-visible:before,._8T6eVG_treeResizeHandle[data-dragging=true]:before{background:var(--dsw-alias-brand-primary)}._8T6eVG_fileRow{width:100%;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;text-align:left;background:0 0;border:0;border-radius:5px;align-items:center;gap:6px;padding-right:7px;display:flex}._8T6eVG_fileRow:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}._8T6eVG_fileRow[data-selected]{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-active)}._8T6eVG_fileRow:disabled{opacity:.45;cursor:not-allowed}._8T6eVG_disclosure{flex:none;place-items:center;width:14px;display:grid}._8T6eVG_fileName{text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:12px;line-height:18px;overflow:hidden}._8T6eVG_treeNotice{color:var(--dsw-alias-label-tertiary);padding:9px 10px;font-size:12px;line-height:18px}._8T6eVG_preview{background:var(--dsw-alias-bg-base);flex-direction:column;min-width:0;min-height:0;display:flex;overflow:hidden}._8T6eVG_previewHeader{min-width:0;height:42px;color:var(--dsw-alias-label-secondary);flex:none;align-items:center;gap:7px;padding:0 12px;display:flex}._8T6eVG_previewHeader>div:last-child{flex-direction:column;min-width:0;display:flex}._8T6eVG_previewHeader strong,._8T6eVG_previewHeader span{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}._8T6eVG_previewHeader strong{color:var(--dsw-alias-label-primary);font-size:12px;font-weight:500;line-height:17px}._8T6eVG_previewHeader span{color:var(--dsw-alias-label-tertiary);font-size:10px;line-height:14px}._8T6eVG_textPreview{min-height:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base);font-family:var(--dsw-font-mono,ui-monospace, SFMono-Regular, Menlo, monospace);tab-size:2;white-space:pre;flex:1;margin:0;padding:14px 16px;font-size:12px;line-height:19px;overflow:auto}._8T6eVG_imagePreview{background:var(--dsw-alias-bg-base);flex:1;place-items:center;min-height:0;margin:0;padding:16px;display:grid;overflow:auto}._8T6eVG_imagePreview img{object-fit:contain;max-width:100%;max-height:100%;display:block}._8T6eVG_placeholder{color:var(--dsw-alias-label-tertiary);text-align:center;flex:1;place-items:center;padding:16px;font-size:12px;line-height:18px;display:grid}@container _8T6eVG_workspace-files (width<=419px){._8T6eVG_pathBar svg{display:none}}";
+		const tagId = "@skylarking/dsh-client-ui-workspace-console/WorkspaceFiles.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
+			const tag = document.createElement("style");
+			tag.dataset.plugin = "@skylarking/dsh-client-ui-workspace-console";
+			tag.dataset.pluginCss = tagId;
+			tag.textContent = css;
+			document.head.appendChild(tag);
+		}
+		var WorkspaceFiles_module_css_default = {
+			"panel": "_8T6eVG_panel",
+			"workspace-files": "_8T6eVG_workspace-files",
+			"content": "_8T6eVG_content",
+			"header": "_8T6eVG_header",
+			"pathBar": "_8T6eVG_pathBar",
+			"treeNotice": "_8T6eVG_treeNotice",
+			"imagePreview": "_8T6eVG_imagePreview",
+			"fileRow": "_8T6eVG_fileRow",
+			"disclosure": "_8T6eVG_disclosure",
+			"treeResizeHandle": "_8T6eVG_treeResizeHandle",
+			"placeholder": "_8T6eVG_placeholder",
+			"previewHeader": "_8T6eVG_previewHeader",
+			"tree": "_8T6eVG_tree",
+			"textPreview": "_8T6eVG_textPreview",
+			"fileName": "_8T6eVG_fileName",
+			"preview": "_8T6eVG_preview"
+		};
+		//#endregion
+		//#region src/client/WorkspaceFiles.tsx
+		/** Two-column file view registered in both Sidebar docks. */
+		const MIN_TREE_WIDTH = 96;
+		const MIN_PREVIEW_WIDTH = 120;
+		const TREE_RESIZE_STEP = 16;
+		function clampTreeWidth(width, contentWidth) {
+			return Math.min(Math.max(width, MIN_TREE_WIDTH), Math.max(MIN_TREE_WIDTH, contentWidth - MIN_PREVIEW_WIDTH));
+		}
+		function joinWorkspacePath(root, relativePath) {
+			if (relativePath === "") return root;
+			const separator = root.includes("\\") ? "\\" : "/";
+			return `${root.replace(/[\\/]+$/u, "")}${separator}${relativePath.replaceAll("/", separator)}`;
+		}
+		function resolveWorkspaceRelativePath(input, root) {
+			const trimmed = input.trim();
+			const normalizedRoot = root.replace(/[\\/]+$/u, "");
+			let relativePath = trimmed;
+			if (trimmed === normalizedRoot || trimmed === "") relativePath = "";
+			else if (trimmed.startsWith(`${normalizedRoot}/`) || trimmed.startsWith(`${normalizedRoot}\\`)) relativePath = trimmed.slice(normalizedRoot.length + 1);
+			else if (/^(?:[A-Za-z]:[\\/]|[\\/])/u.test(trimmed)) return void 0;
+			const segments = relativePath.split(/[\\/]+/u).filter((segment) => segment !== "" && segment !== ".");
+			if (segments.includes("..")) return void 0;
+			return segments.join("/");
+		}
+		/**
+		* Bind shared file services to a keyed Sidebar view registration.
+		* @param injected - Workspace and file services shared by all instances.
+		* @returns a component whose browser state belongs to one dock tab.
+		*/
+		function bindWorkspaceFilesView(injected) {
+			return function BoundWorkspaceFilesView(props) {
+				return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(WorkspaceFilesView, {
+					...injected,
+					...props
 				});
-			}, [items]);
-			const selectedTabId = tabs.some((tab) => tab.id === activeTabId) ? activeTabId : tabs[0]?.id;
-			const addTab = () => {
-				const source = tabs.find((tab) => tab.id === selectedTabId) ?? tabs[0];
-				if (source === void 0) return;
-				const tab = {
-					id: nextTabId.current++,
-					workspaceId: source.workspaceId
-				};
-				setTabs((current) => [...current, tab]);
-				setActiveTabId(tab.id);
 			};
-			const closeTab = (id) => {
-				if (tabs.length === 1) {
-					close();
+		}
+		function FileRow({ entry, depth, expanded, selected, onOpen }) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+				type: "button",
+				className: WorkspaceFiles_module_css_default.fileRow,
+				"data-selected": selected || void 0,
+				disabled: entry.ignored,
+				style: { paddingLeft: `${12 + depth * 16}px` },
+				title: entry.ignored ? entry.name : entry.path,
+				onClick: onOpen,
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: WorkspaceFiles_module_css_default.disclosure,
+						children: entry.kind === "directory" && (expanded ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutline14, {}))
+					}),
+					entry.kind === "directory" ? expanded ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderClose16, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutline16, {}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: WorkspaceFiles_module_css_default.fileName,
+						children: entry.name
+					})
+				]
+			});
+		}
+		function Preview({ preview, pending, error, t }) {
+			if (pending) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: WorkspaceFiles_module_css_default.placeholder,
+				children: t("loading")
+			});
+			if (error) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: WorkspaceFiles_module_css_default.placeholder,
+				children: t("error.read")
+			});
+			if (preview === void 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: WorkspaceFiles_module_css_default.placeholder,
+				children: t("empty.preview")
+			});
+			if (preview.kind === "text") return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
+				className: WorkspaceFiles_module_css_default.textPreview,
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preview.content })
+			});
+			if (preview.kind === "image") return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: WorkspaceFiles_module_css_default.imagePreview,
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("img", {
+					src: `data:${preview.mimeType};base64,${preview.base64}`,
+					alt: preview.path
+				})
+			});
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: WorkspaceFiles_module_css_default.placeholder,
+				children: t(`unsupported.${preview.reason}`)
+			});
+		}
+		/**
+		* Render one Sidebar file tab bound to one Workspace, directory tree, and preview.
+		* @param props - active state plus shared Workspace and file services.
+		* @returns the mounted file view.
+		*/
+		function WorkspaceFilesView(props) {
+			const { workspaces, list, read, t } = props;
+			const workspaceSnapshot = (0, react.useSyncExternalStore)(workspaces.subscribe, workspaces.getSnapshot);
+			const workspaceItems = workspaceSnapshot.items;
+			const [workspaceId, setWorkspaceId] = (0, react.useState)();
+			const [directories, setDirectories] = (0, react.useState)({});
+			const [expanded, setExpanded] = (0, react.useState)(new Set([""]));
+			const [browsePath, setBrowsePath] = (0, react.useState)("");
+			const [pathDraft, setPathDraft] = (0, react.useState)("");
+			const [treeWidth, setTreeWidth] = (0, react.useState)();
+			const [treeDragging, setTreeDragging] = (0, react.useState)(false);
+			const [selectedPath, setSelectedPath] = (0, react.useState)();
+			const [preview, setPreview] = (0, react.useState)();
+			const [listError, setListError] = (0, react.useState)(false);
+			const [previewPending, setPreviewPending] = (0, react.useState)(false);
+			const [previewError, setPreviewError] = (0, react.useState)(false);
+			const resizeDrag = (0, react.useRef)(null);
+			(0, react.useEffect)(() => {
+				if (workspaceId !== void 0 && workspaceItems.some((item) => item.workspaceId === workspaceId)) return;
+				const recent = workspaceSnapshot.recentWorkspaceId;
+				setWorkspaceId(recent !== void 0 && workspaceItems.some((item) => item.workspaceId === recent) ? recent : workspaceItems[0]?.workspaceId);
+			}, [
+				workspaceId,
+				workspaceItems,
+				workspaceSnapshot.recentWorkspaceId
+			]);
+			(0, react.useEffect)(() => {
+				setDirectories({});
+				setExpanded(new Set([""]));
+				setBrowsePath("");
+				setPathDraft(workspaceItems.find((item) => item.workspaceId === workspaceId)?.path ?? "");
+				setTreeWidth(void 0);
+				setSelectedPath(void 0);
+				setPreview(void 0);
+				setListError(false);
+				if (workspaceId === void 0) return;
+				let current = true;
+				list(workspaceId, "").then((listing) => {
+					if (current) setDirectories({ "": listing });
+				}).catch(() => {
+					if (current) setListError(true);
+				});
+				return () => {
+					current = false;
+				};
+			}, [
+				list,
+				workspaceId,
+				workspaceItems
+			]);
+			const rows = (0, react.useMemo)(() => {
+				const output = [];
+				const append = (path, depth) => {
+					for (const entry of directories[path]?.entries ?? []) {
+						output.push({
+							entry,
+							depth
+						});
+						if (entry.kind === "directory" && expanded.has(entry.path)) append(entry.path, depth + 1);
+					}
+				};
+				append(browsePath, 0);
+				return output;
+			}, [
+				browsePath,
+				directories,
+				expanded
+			]);
+			const openEntry = (entry) => {
+				if (workspaceId === void 0) return;
+				if (entry.kind === "directory") {
+					const next = new Set(expanded);
+					if (next.has(entry.path)) next.delete(entry.path);
+					else {
+						next.add(entry.path);
+						if (directories[entry.path] === void 0) list(workspaceId, entry.path).then((listing) => {
+							setDirectories((value) => ({
+								...value,
+								[entry.path]: listing
+							}));
+						}).catch(() => {
+							setListError(true);
+						});
+					}
+					setExpanded(next);
 					return;
 				}
-				const index = tabs.findIndex((tab) => tab.id === id);
-				const remaining = tabs.filter((tab) => tab.id !== id);
-				setTabs(remaining);
-				if (selectedTabId === id) setActiveTabId(remaining[index]?.id ?? remaining[index - 1]?.id);
+				setSelectedPath(entry.path);
+				setPreview(void 0);
+				setPreviewError(false);
+				setPreviewPending(true);
+				read(workspaceId, entry.path).then(setPreview).catch(() => {
+					setPreviewError(true);
+				}).finally(() => {
+					setPreviewPending(false);
+				});
 			};
-			const setWorkspace = (id, workspaceId) => {
-				setActiveTabId(id);
-				setTabs((current) => current.map((tab) => tab.id === id ? {
-					...tab,
-					workspaceId
-				} : tab));
+			const selectedWorkspace = workspaceItems.find((item) => item.workspaceId === workspaceId);
+			const selectedName = selectedPath?.split("/").at(-1) ?? selectedPath;
+			const submitPath = (event) => {
+				event.preventDefault();
+				if (workspaceId === void 0 || selectedWorkspace === void 0) return;
+				const target = resolveWorkspaceRelativePath(pathDraft, selectedWorkspace.path);
+				if (target === void 0) {
+					setListError(true);
+					return;
+				}
+				setListError(false);
+				list(workspaceId, target).then((listing) => {
+					setDirectories({ [target]: listing });
+					setExpanded(new Set([target]));
+					setBrowsePath(target);
+					setPathDraft(joinWorkspacePath(selectedWorkspace.path, target));
+					setSelectedPath(void 0);
+					setPreview(void 0);
+					setPreviewError(false);
+					setPreviewPending(false);
+				}).catch(() => {
+					setListError(true);
+				});
 			};
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-				className: WorkspaceConsole_module_css_default.panel,
+				className: WorkspaceFiles_module_css_default.panel,
 				"aria-label": t("title"),
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("header", {
-					className: WorkspaceConsole_module_css_default.tabBar,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: WorkspaceConsole_module_css_default.tabs,
-						children: [tabs.map((tab) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-							className: WorkspaceConsole_module_css_default.tab,
-							"data-active": tab.id === selectedTabId,
-							onMouseDown: () => {
-								setActiveTabId(tab.id);
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("header", {
+					className: WorkspaceFiles_module_css_default.header,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("form", {
+						className: WorkspaceFiles_module_css_default.pathBar,
+						onSubmit: submitPath,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, {}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+							value: pathDraft,
+							"aria-label": t("path"),
+							title: pathDraft,
+							spellCheck: false,
+							onChange: (event) => {
+								setPathDraft(event.target.value);
 							},
+							onBlur: () => {
+								setPathDraft(joinWorkspacePath(selectedWorkspace?.path ?? "", browsePath));
+							},
+							onKeyDown: (event) => {
+								if (event.key !== "Escape") return;
+								setPathDraft(joinWorkspacePath(selectedWorkspace?.path ?? "", browsePath));
+								event.currentTarget.blur();
+							}
+						})]
+					})
+				}), workspaceItems.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: WorkspaceFiles_module_css_default.placeholder,
+					children: t("empty.workspaces")
+				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: WorkspaceFiles_module_css_default.content,
+					style: treeWidth === void 0 ? void 0 : { "--workspace-tree-width": `${treeWidth}px` },
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("aside", {
+							className: WorkspaceFiles_module_css_default.tree,
+							"aria-label": t("title"),
 							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutline16, { size: 14 }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: WorkspaceConsole_module_css_default.srOnly,
-									children: t("workspace")
+								listError && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									className: WorkspaceFiles_module_css_default.treeNotice,
+									children: t("error.list")
 								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
-									value: tab.workspaceId,
-									"aria-label": t("workspace"),
-									onChange: (event) => {
-										setWorkspace(tab.id, event.target.value);
-									},
-									children: items.map((item) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-										value: item.workspaceId,
-										children: item.title
-									}, item.workspaceId))
+								rows.map(({ entry, depth }) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FileRow, {
+									entry,
+									depth,
+									expanded: expanded.has(entry.path),
+									selected: selectedPath === entry.path,
+									onOpen: () => {
+										openEntry(entry);
+									}
+								}, entry.path)),
+								directories[browsePath]?.entries.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									className: WorkspaceFiles_module_css_default.treeNotice,
+									children: t("empty.directory")
 								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									className: WorkspaceConsole_module_css_default.tabClose,
-									"aria-label": t("action.closeTab"),
-									onClick: (event) => {
-										event.preventDefault();
-										closeTab(tab.id);
-									},
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutline16, { size: 13 })
+								Object.values(directories).some((directory) => directory.truncated) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									className: WorkspaceFiles_module_css_default.treeNotice,
+									children: t("truncated")
 								})
 							]
-						}, tab.id)), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-							label: t("action.new"),
-							delayMs: 500,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								type: "button",
-								className: WorkspaceConsole_module_css_default.add,
-								"aria-label": t("action.new"),
-								disabled: tabs.length === 0,
-								onClick: addTab,
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, {})
-							})
-						})]
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						type: "button",
-						className: WorkspaceConsole_module_css_default.close,
-						"aria-label": t("action.close"),
-						onClick: close,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutline16, {})
-					})]
-				}), tabs.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: WorkspaceConsole_module_css_default.empty,
-					children: t("noWorkspace")
-				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: WorkspaceConsole_module_css_default.terminals,
-					children: tabs.map((tab) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: WorkspaceConsole_module_css_default.terminalPane,
-						hidden: tab.id !== selectedTabId,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TerminalViewport, {
-							active: tab.id === selectedTabId,
-							workspaceId: tab.workspaceId,
-							remote: terminal,
-							t
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: WorkspaceFiles_module_css_default.treeResizeHandle,
+							role: "separator",
+							"aria-label": t("action.resizeTree"),
+							"aria-orientation": "vertical",
+							"data-dragging": treeDragging || void 0,
+							tabIndex: 0,
+							title: t("action.resizeTree"),
+							onDoubleClick: () => {
+								setTreeWidth(void 0);
+							},
+							onPointerDown: (event) => {
+								if (event.button !== 0) return;
+								const content = event.currentTarget.parentElement;
+								const tree = event.currentTarget.previousElementSibling;
+								if (content === null || !(tree instanceof HTMLElement)) return;
+								resizeDrag.current = {
+									pointerId: event.pointerId,
+									startX: event.clientX,
+									startWidth: tree.getBoundingClientRect().width,
+									contentWidth: content.getBoundingClientRect().width
+								};
+								setTreeDragging(true);
+								event.currentTarget.setPointerCapture(event.pointerId);
+								event.preventDefault();
+							},
+							onPointerMove: (event) => {
+								const drag = resizeDrag.current;
+								if (drag === null || drag.pointerId !== event.pointerId) return;
+								setTreeWidth(clampTreeWidth(drag.startWidth + event.clientX - drag.startX, drag.contentWidth));
+							},
+							onPointerUp: (event) => {
+								if (resizeDrag.current?.pointerId !== event.pointerId) return;
+								resizeDrag.current = null;
+								setTreeDragging(false);
+								event.currentTarget.releasePointerCapture(event.pointerId);
+							},
+							onPointerCancel: () => {
+								resizeDrag.current = null;
+								setTreeDragging(false);
+							},
+							onKeyDown: (event) => {
+								if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+								const content = event.currentTarget.parentElement;
+								const tree = event.currentTarget.previousElementSibling;
+								if (content === null || !(tree instanceof HTMLElement)) return;
+								const direction = event.key === "ArrowLeft" ? -1 : 1;
+								setTreeWidth(clampTreeWidth(tree.getBoundingClientRect().width + direction * TREE_RESIZE_STEP, content.getBoundingClientRect().width));
+								event.preventDefault();
+							}
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("main", {
+							className: WorkspaceFiles_module_css_default.preview,
+							children: [selectedPath !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: WorkspaceFiles_module_css_default.previewHeader,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutline16, {}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: selectedName }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									title: selectedPath,
+									children: selectedPath
+								})] })]
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Preview, {
+								preview,
+								pending: previewPending,
+								error: previewError,
+								t
+							})]
 						})
-					}, tab.id))
+					]
 				})]
 			});
 		}
 		//#endregion
+		//#region src/client/locales.ts
+		/** Sidebar dictionaries. */
+		const zh = {
+			"action.openBottom": "打开底部面板",
+			"action.openRight": "打开右侧面板",
+			"action.close": "关闭面板",
+			"action.add": "新增视图",
+			"action.closeTab": "关闭标签",
+			"action.resizeTree": "调节文件列表宽度",
+			"sidebar.title": "工作区面板",
+			"view.terminal": "终端",
+			"view.files": "文件",
+			"title": "文件",
+			"workspace": "工作空间",
+			"path": "文件路径",
+			"terminal.error": "终端连接失败",
+			"terminal.truncated": "较早的终端输出已截断",
+			"empty.views": "没有可用视图",
+			"empty.workspaces": "还没有可用的工作空间",
+			"empty.directory": "此文件夹为空",
+			"empty.preview": "选择一个文件以预览",
+			"loading": "正在加载…",
+			"error.list": "无法读取此文件夹",
+			"error.read": "无法预览此文件",
+			"truncated": "条目过多，仅显示前 500 项",
+			"unsupported.binary": "这是二进制文件，无法预览",
+			"unsupported.too-large": "文件过大，无法预览",
+			"unsupported.unreadable": "文件无法读取"
+		};
+		/** English dictionary, checked against Chinese keys. */
+		const en = {
+			"action.openBottom": "Open bottom panel",
+			"action.openRight": "Open right panel",
+			"action.close": "Close panel",
+			"action.add": "Add view",
+			"action.closeTab": "Close tab",
+			"action.resizeTree": "Resize file list",
+			"sidebar.title": "Workspace panels",
+			"view.terminal": "Terminal",
+			"view.files": "Files",
+			"title": "Files",
+			"workspace": "Workspace",
+			"path": "File path",
+			"terminal.error": "Terminal connection failed",
+			"terminal.truncated": "Earlier terminal output was truncated",
+			"empty.views": "No views are available",
+			"empty.workspaces": "No workspace is available",
+			"empty.directory": "This folder is empty",
+			"empty.preview": "Select a file to preview",
+			"loading": "Loading…",
+			"error.list": "Could not read this folder",
+			"error.read": "Could not preview this file",
+			"truncated": "Too many entries; only the first 500 are shown",
+			"unsupported.binary": "This binary file cannot be previewed",
+			"unsupported.too-large": "This file is too large to preview",
+			"unsupported.unreadable": "This file cannot be read"
+		};
+		//#endregion
 		//#region src/client/index.ts
-		const NS = "workspace-console";
+		const NS = "workspace-sidebar";
 		const UI_INJECT = [
 			"slots",
 			"locale",
 			"layout",
 			"remote",
 			"remote.workspaceConsole",
+			"remote.workspaceFiles",
 			"workspaces"
 		];
-		/** Install Hero and Session triggers after the mounted terminal Remote is injectable. */
-		function registerWorkspaceConsole(ctx) {
+		function views(ctx) {
+			return {
+				getSnapshot: () => {
+					const catalog = ctx.slots.entries("workspace-sidebar.view");
+					const right = new Set(ctx.slots.entries("workspace-sidebar.right.view").map((entry) => entry.options.key));
+					const bottom = new Set(ctx.slots.entries("workspace-sidebar.bottom.view").map((entry) => entry.options.key));
+					for (const entry of catalog) {
+						const id = entry.options.id;
+						if (id !== void 0 && (!right.has(id) || !bottom.has(id))) throw new Error(`workspace-sidebar view '${id}' must register matching right and bottom renderers`);
+					}
+					return catalog;
+				},
+				subscribe: (listener) => {
+					const offCatalog = ctx.slots.subscribe("workspace-sidebar.view", listener);
+					const offRight = ctx.slots.subscribe("workspace-sidebar.right.view", listener);
+					const offBottom = ctx.slots.subscribe("workspace-sidebar.bottom.view", listener);
+					return () => {
+						offBottom();
+						offRight();
+						offCatalog();
+					};
+				}
+			};
+		}
+		function unwrap(operation, result) {
+			if (!result.ok) throw new Error(`${operation} failed: ${result.error.code}: ${result.error.message}`);
+			return result.value;
+		}
+		function registerSidebar(ctx) {
 			ctx.effect(() => ctx.locale.register(NS, {
 				zh,
 				en
-			}), "ui-workspace-console: dictionaries");
-			const layout = ctx.layout;
-			const unwrap = (operation, result) => {
-				if (!result.ok) throw new Error(`workspaceConsole.${operation} failed: ${result.error.code}: ${result.error.message}`);
-				return result.value;
-			};
+			}), "ui-sidebar: dictionaries");
 			const terminal = {
-				open: async (workspaceId, cols, rows) => {
-					return unwrap("open", await ctx.remote.workspaceConsole.open(workspaceId, cols, rows)).sessionId;
-				},
+				open: async (workspaceId, cols, rows) => unwrap("workspaceConsole.open", await ctx.remote.workspaceConsole.open(workspaceId, cols, rows)).sessionId,
 				write: async (sessionId, data) => {
-					unwrap("write", await ctx.remote.workspaceConsole.write(sessionId, data));
+					unwrap("workspaceConsole.write", await ctx.remote.workspaceConsole.write(sessionId, data));
 				},
-				read: async (sessionId, offset) => unwrap("read", await ctx.remote.workspaceConsole.read(sessionId, offset)),
+				read: async (sessionId, offset) => unwrap("workspaceConsole.read", await ctx.remote.workspaceConsole.read(sessionId, offset)),
 				resize: async (sessionId, cols, rows) => {
-					unwrap("resize", await ctx.remote.workspaceConsole.resize(sessionId, cols, rows));
+					unwrap("workspaceConsole.resize", await ctx.remote.workspaceConsole.resize(sessionId, cols, rows));
 				},
 				close: async (sessionId) => {
-					unwrap("close", await ctx.remote.workspaceConsole.close(sessionId));
+					unwrap("workspaceConsole.close", await ctx.remote.workspaceConsole.close(sessionId));
 				}
 			};
-			const injected = () => ({
-				layout: { toggleBottomPanel: () => {
-					layout.toggleBottomPanel();
-				} },
-				workspaces: ctx.workspaces.list,
-				terminal
-			});
+			const files = {
+				list: async (workspaceId, path) => unwrap("workspaceFiles.list", await ctx.remote.workspaceFiles.list(workspaceId, path)),
+				read: async (workspaceId, path) => unwrap("workspaceFiles.read", await ctx.remote.workspaceFiles.read(workspaceId, path))
+			};
+			const common = { workspaces: ctx.workspaces.list };
+			const triggerInjected = () => ({ layout: {
+				toggleBottomPanel: () => {
+					ctx.layout.toggleBottomPanel();
+				},
+				toggleRightPanel: () => {
+					ctx.layout.toggleRightPanel();
+				}
+			} });
 			ctx.slots.inject("shell.hero.utilities", () => ctx.slots.register({
 				name: "shell.hero.utilities",
-				id: "workspace-console",
+				id: "workspace-sidebar",
 				order: 20,
 				locale: NS,
-				inject: injected
-			}, WorkspaceConsoleTrigger));
+				inject: triggerInjected
+			}, SidebarTriggers));
 			ctx.slots.inject("conversation.session.header.utilities", () => ctx.slots.register({
 				name: "conversation.session.header.utilities",
-				id: "workspace-console",
+				id: "workspace-sidebar",
 				order: 20,
 				locale: NS,
-				inject: injected
-			}, WorkspaceConsoleTrigger));
+				inject: triggerInjected
+			}, SidebarTriggers));
+			ctx.slots.inject("shell.rightPanel", () => ctx.slots.register({
+				name: "shell.rightPanel",
+				locale: NS,
+				children: {
+					"workspace-sidebar.view": {
+						kind: "list",
+						scope: "root"
+					},
+					"workspace-sidebar.right.view": {
+						kind: "keyed",
+						scope: "root"
+					}
+				},
+				inject: () => ({ views: views(ctx) })
+			}, RightDock));
 			ctx.slots.inject("shell.bottomPanel", () => ctx.slots.register({
 				name: "shell.bottomPanel",
 				locale: NS,
-				inject: injected
-			}, WorkspaceConsolePanel));
+				children: { "workspace-sidebar.bottom.view": {
+					kind: "keyed",
+					scope: "root"
+				} },
+				inject: () => ({ views: views(ctx) })
+			}, BottomDock));
+			const TerminalView = bindWorkspaceTerminalView({
+				...common,
+				terminal
+			});
+			const FilesView = bindWorkspaceFilesView({
+				...common,
+				...files
+			});
+			const translate = ctx.locale.bind(NS);
+			ctx.slots.inject("workspace-sidebar.right.view", () => [ctx.slots.register({
+				name: "workspace-sidebar.right.view",
+				key: "terminal",
+				locale: NS
+			}, TerminalView), ctx.slots.register({
+				name: "workspace-sidebar.right.view",
+				key: "files",
+				locale: NS
+			}, FilesView)]);
+			ctx.slots.inject("workspace-sidebar.bottom.view", () => [ctx.slots.register({
+				name: "workspace-sidebar.bottom.view",
+				key: "terminal",
+				locale: NS
+			}, TerminalView), ctx.slots.register({
+				name: "workspace-sidebar.bottom.view",
+				key: "files",
+				locale: NS
+			}, FilesView)]);
+			ctx.slots.inject("workspace-sidebar.view", () => [ctx.slots.register({
+				name: "workspace-sidebar.view",
+				id: "terminal",
+				order: 10,
+				label: () => translate("view.terminal")
+			}, () => null), ctx.slots.register({
+				name: "workspace-sidebar.view",
+				id: "files",
+				order: 20,
+				label: () => translate("view.files")
+			}, () => null)]);
 			ctx.effect(() => () => {
-				layout.closeBottomPanel();
-			}, "ui-workspace-console: restore bottom split on unload");
+				ctx.layout.closeRightPanel();
+				ctx.layout.closeBottomPanel();
+			}, "ui-sidebar: close docks on unload");
 		}
-		/** Required service for mounting the plugin-owned Remote contribution. */
+		/** Required service for mounting both Sidebar Remote contributions. */
 		const inject = ["remote"];
-		/** Mount the terminal Remote before starting its UI consumer. */
+		/** Mount the terminal and file Remotes before registering their dock views. */
 		async function apply(ctx) {
+			await ctx.remote.$mount(TYPERT_REMOTE$1);
 			await ctx.remote.$mount(TYPERT_REMOTE);
-			await ctx.inject(UI_INJECT, registerWorkspaceConsole);
+			await ctx.inject(UI_INJECT, registerSidebar);
 		}
 		//#endregion
 		exports.apply = apply;

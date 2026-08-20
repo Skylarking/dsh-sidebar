@@ -1,14 +1,20 @@
-# @skylarking/dsh-client-ui-workspace-console
+# `@skylarking/dsh-client-ui-workspace-console`
 
 English | [中文](README.zh.md)
 
-Reversible operator terminal surface. The browser half contributes a Command console icon to both `shell.hero.utilities` and `conversation.session.header.utilities`, then occupies the layout-owned `shell.bottomPanel` split. Each tab mounts xterm with a fit addon, serializes raw keyboard data to its own persistent `workspaceConsole` PTY in arrival order, polls offset-based output, and sends row and column changes after the split resizes. Adding a tab inherits the active tab's Workspace, while switching tabs preserves both shell sessions. Operators can use shell state, REPLs, terminal control keys, and interactive programs inside each selected Workspace's initial directory.
+Browser package behind the installable Sidebar plugin. It occupies the layout-owned `shell.rightPanel` and `shell.bottomPanel` slots with generic tab hosts. The right dock defaults to files and the bottom dock defaults to a terminal, while both expose the same add menu and preserve inactive tab component identity. A new built-in view binds to the recent Workspace without rendering a second Workspace selector; terminal tabs replace their catalog title with the bound Workspace title.
 
-The mounted panel owns every tab's PTY identity. Closing a tab terminates only its session; changing that tab's Workspace replaces its session; closing the panel or unloading the plugin terminates all remaining sessions. Visibility, tabs, and geometry are transient layout state. Removing its cordis.yml row closes the split and removes the button and terminals; removing the separate Host row revokes terminal authority and awaits Host-side process cleanup. Neither uninstall path changes Workspace or Session persistence.
+The package mounts the `workspaceConsole` and `workspaceFiles` Remote contributions before registering its UI. Unloading removes both docks, their triggers and registered views, closes the layout regions, terminates mounted PTYs, and releases file-browser state.
+
+## View extension
+
+A view type contributes one catalog entry to `workspace-sidebar.view` and matching keyed renderers to `workspace-sidebar.right.view` and `workspace-sidebar.bottom.view`. The catalog entry's `id` is the dispatch key and its `label` is the add-menu text and default tab title. Each renderer receives `active`, which is false while its tab remains mounted but hidden, and `setTitle`, which replaces the title for that tab instance.
+
+Register both keyed renderers before publishing the catalog entry, and dispose the catalog before the renderers. The dock rejects a catalog id that lacks either renderer. This symmetry guarantees that every listed view can open in both locations; a future Review plugin can register through these three slots without changing Sidebar.
 
 ## Model Experience
 
-None, as this operator surface does not alter prompts, tools, messages, or provider requests.
+None, as this operator UI has no model-visible output.
 
 #### KV Cache effect
 
@@ -16,4 +22,5 @@ None.
 
 ## Known Limitations and Deferred Work
 
-- Output reaches xterm through bounded polling rather than a streaming Remote subscription; the Host retains only its configured byte tail while the panel is disconnected or delayed.
+- View instances persist across tab switches but not dock closure or plugin unload.
+- Terminal-specific internal packages retain `workspace-console`; the installable project and bundle are `dsh-sidebar` and `@skylarking/dsh-sidebar`.

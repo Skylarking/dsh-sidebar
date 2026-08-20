@@ -6,7 +6,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Skylarking/deepseek-harness-desktop.git",
-    "directory": "plugins/workspace-console/packages/host"
+    "directory": "plugins/dsh-sidebar/packages/host"
   },
   "type": "module",
   "main": "lib/index.js",
