@@ -1,0 +1,6 @@
+- insert:
+    - id: workspace-console
+      name: '@skylarking/dsh-host-workspace-console'
+
+    - id: ui-workspace-console
+      name: '@skylarking/dsh-client-ui-workspace-console'
